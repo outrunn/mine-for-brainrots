@@ -131,6 +131,28 @@
 
 ## Development Log
 
+### 2026-02-25: Brainrot Auto-Resume After Pit Reset (Issue #36)
+
+#### Work Completed
+1. **Created `PitResetComplete` BindableEvent** (`game.ServerStorage.PitResetComplete`)
+   - Fired by PitGenerator after pit regeneration finishes (after `generate()`, before forcefield removal)
+
+2. **Updated `PitGenerator`** (`game.ServerScriptService.PitGenerator`)
+   - Added `PitResetComplete` reference via WaitForChild
+   - Fires `PitResetComplete` after pit generation completes in `performReset()`
+
+3. **Updated `BrainrotMiningServer`** (`game.ServerScriptService.BrainrotMiningServer`)
+   - Added `preResetActiveSquares` state table: `userId -> { squareName1, ... }`
+   - PitResetting handler now saves which squares were "active" before recalling to "inactive"
+   - New PitResetComplete handler: iterates saved active squares, re-activates them (destroys square clone, creates pit NPC clone, starts mining loop)
+   - Cleanup in PlayerRemoving clears `preResetActiveSquares[userId]`
+
+#### Design Decisions
+- **In-memory only**: `preResetActiveSquares` is ephemeral (not persisted to DataStore) — only needed between PitResetting and PitResetComplete events within the same session
+- **Re-activation mirrors handlePromptE Case 3**: Same logic for inactive→active transition (destroy square clone, create pit clone, start mining loop, update prompts)
+- **Idle brainrots stay idle**: Only squares that were "active" before reset are auto-resumed; "inactive" and "empty" squares are untouched
+- **Robust**: Validates state is still "inactive" and brainrot info exists before resuming (handles edge cases like player picking up brainrot during reset)
+
 ### 2026-02-25: Daily Spin System (Issue #23)
 
 #### Work Completed
