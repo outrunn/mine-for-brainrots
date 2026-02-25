@@ -131,6 +131,18 @@
 
 ## Development Log
 
+### 2026-02-25: Fix Base Spawning (Issue #31)
+
+#### Bugs Found & Fixed
+1. **Syntax error (showstopper)**: Stray `end` on line 750 of `BrainrotMiningServer` caused `Expected <eof>, got 'end'` parse error. The entire script failed to load — `PlayerAdded` never registered, so no player ever got a base.
+   - **Fix**: Removed the stray `end` on line 750 (was left over from a previous refactor of `startSquareMiningLoop`).
+
+2. **Slot counter never recycled**: `nextSlot` was a monotonically increasing counter (0, 1, 2, ...). When players left, `playerSlots[userId]` was cleared but `nextSlot` was never decremented. After 8 cumulative joins (even if all players left), all new players would be kicked with "Server is full!".
+   - **Fix**: Replaced `nextSlot` counter with `findAvailableSlot()` scan that iterates `0..MAX_PLAYERS-1` and checks `playerSlots` for the first unused index. Freed slots are now properly recycled.
+
+#### Files Changed (via MCP)
+- `game.ServerScriptService.BrainrotMiningServer` — removed stray `end`, replaced slot assignment logic
+
 ### 2026-02-23: Rebirth System Implemented
 
 #### Work Completed
