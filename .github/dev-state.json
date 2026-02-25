@@ -3,32 +3,42 @@
   "mcpPorts": {
     "58741": "in-use",
     "58742": "in-use",
-    "58743": "available"
+    "58743": "in-use"
   },
   "activeAgents": [
     {
-      "terminalWindow": "3255",
-      "pid": 45519,
+      "terminalWindow": "3438",
       "mcpPort": 58741,
       "issue": 8,
       "title": "Fix brainrots glitching through floor",
       "branch": "fix/brainrot-physics",
-      "startedAt": "2026-02-24T19:23:00Z",
-      "status": "running"
+      "startedAt": "2026-02-24T19:43:00Z",
+      "status": "AUTONOMOUS"
     },
     {
-      "terminalWindow": "3260",
-      "pid": 45606,
+      "terminalWindow": "3439",
       "mcpPort": 58742,
-      "issue": 4,
-      "title": "Overhaul mining system",
-      "branch": "feature/mining-overhaul",
-      "startedAt": "2026-02-24T19:23:00Z",
-      "status": "running"
+      "issue": 7,
+      "title": "Add home and shop teleport buttons",
+      "branch": "feature/teleport-buttons",
+      "startedAt": "2026-02-24T19:43:00Z",
+      "status": "AUTONOMOUS"
+    },
+    {
+      "terminalWindow": "3449",
+      "mcpPort": 58743,
+      "issue": 2,
+      "title": "Redo shop UI to match game style",
+      "branch": "feature/shop-ui-rework",
+      "startedAt": "2026-02-24T19:43:00Z",
+      "status": "AUTONOMOUS"
     }
   ],
+  "monitoring": {
+    "monitorPid": 46243,
+    "checkInterval": "30s",
+    "note": "FIXED: Killed all duplicates, clean restart with exactly 3 agents"
+  },
   "completedToday": 0,
-  "lastSync": "2026-02-24T19:30:00Z",
-  "lastMcpTest": "2026-02-24T19:31:00Z",
-  "mcpStatus": "healthy"
+  "lastSync": "2026-02-24T19:43:00Z"
 }
