@@ -138,7 +138,7 @@
    - Changed from 1 free spin / 24h to 5 spins / day regenerating every 4h 48m (17280s)
    - `MAX_DAILY_SPINS = 5`, `REGEN_INTERVAL = 17280`, `NEW_PLAYER_BONUS_SPINS = 3`
    - Removed `BUY_SPIN_COSTS` entirely — no purchasing
-   - Improved rewards: 500/1000/2500/5000 coins, 10 coal, 5 gold, 2 diamonds, gacha ticket (8 slots)
+   - Rewards: 2k/5k/10k/25k/50k coins + Random Rare (15%), Epic (8%), Mythic (5%) brainrot drops. Weights sum to 100.
 
 2. **Rewrote SpinServer** (`game.ServerScriptService.SpinServer`)
    - `regenerateSpins(data)` — calculates spins regenerated since last checkpoint, caps at MAX
@@ -160,10 +160,15 @@
 5. **Updated ButtonHandlers** (`game.StarterGui.MenusGUI.Scripts.ButtonHandlers`)
    - All buy-spin handlers now show "Coming Soon!" placeholder instead of firing BuySpins
 
+6. **Brainrot rewards in SpinServer**
+   - `grantReward()` handles `"brainrot"` type: picks random brainrot from `BrainrotConfig.BRAINROT_POOL[rarity]`, inserts into `ownedBrainrots`
+   - Client displays actual brainrot name won (e.g. "Mythic Bombardiro Crocodilo")
+
 #### Design Decisions
 - **Regen model**: `extraSpins` = current available count, `freeSpinTimestamp` = last regen checkpoint. Elapsed intervals added as spins, timestamp advanced by consumed intervals (preserves partial progress).
 - **New player bonus**: Detected by `freeSpinTimestamp == 0` (default), grants 3 spins immediately.
 - **No purchasing**: BuySpins event still exists (to avoid breaking UI references) but server handler is a no-op.
+- **Brainrot drops**: Rare=15%, Epic=8%, Mythic=5%. Random pick from existing BRAINROT_POOL in BrainrotConfig.
 - **Backward compatible**: Reuses existing `freeSpinTimestamp` and `extraSpins` data fields — no PlayerDataManager schema changes needed.
 
 ### 2026-02-25: Fix Base Spawning (Issue #31)
