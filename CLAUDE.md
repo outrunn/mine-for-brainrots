@@ -184,7 +184,7 @@ Replaced entire NPC movement system with Roblox Humanoid-driven physics walking.
 
 #### How It Works
 - **Home button**: Teleports player to their PlayerBase (finds `playerName_Base` in `workspace.PlayerBases`, lands 5 studs above base part)
-- **Shop button**: Teleports player in front of shop at `Vector3(130, 5, -122)`
+- **Shop button**: Teleports player in front of shop at `Vector3(122, 5, -122)`
 - Creates its own `TeleportHud` ScreenGui with `ResetOnSpawn = false`
 
 ### 2026-02-23: Rebirth System Implemented
