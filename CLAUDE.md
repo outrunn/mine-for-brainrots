@@ -155,6 +155,14 @@
 - **Auto-dismiss**: 5-second timeout ensures popup doesn't block gameplay if player ignores it
 - **Accent colors**: Currency=gold, Coal=dark gray, Gold ore=gold, Redstone=red, Diamond=cyan, Gacha=purple
 
+3. **Updated `AdminServer`** (`game.ServerScriptService.AdminServer`)
+   - Added `RewardsConfig` require
+   - `ResetRewards` command: clears `claimedMilestones`, zeroes `sessionPlaytime`, resets daily timer, pushes `RewardsUpdate` to client
+   - `UnlockAllRewards` command: sets playtime past max milestone, grants all rewards (currency/ore/tickets), marks all claimed, pushes update
+
+4. **Updated `AdminClient`** (`game.StarterPlayer.StarterPlayerScripts.AdminClient`)
+   - Added REWARDS section with "Reset Rewards" (red) and "Unlock All Rewards" (green) buttons
+
 ### 2026-02-25: Brainrot Auto-Resume After Pit Reset (Issue #36)
 
 #### Work Completed
