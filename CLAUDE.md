@@ -132,6 +132,38 @@
 
 ## Development Log
 
+### 2026-02-24: Brainrot NPC Humanoid Walking System (Issue #8)
+
+#### Problem
+Brainrot NPCs used tween-based movement (anchored root, teleport from A to B) causing floor clipping and unnatural movement. NPCs floated through terrain instead of walking on it.
+
+#### Solution — Humanoid-based physics movement
+Replaced entire NPC movement system with Roblox Humanoid-driven physics walking.
+
+#### Changes Made (BrainrotMiningServer)
+1. **`cloneNPCBrainrot`** — Now creates Humanoid-based NPCs instead of anchored/tweened:
+   - Adds `Humanoid` instance (WalkSpeed=20, JumpPower=52, RequiresNeck=false)
+   - RootPart is **unanchored** with CanCollide=true (physics-driven)
+   - Still welds all other parts to root, still cleans up pre-existing joints
+   - Still calculates GroundOffset for initial spawn positioning
+
+2. **New `setupNPCJumping(clone)`** — Heartbeat connection per NPC:
+   - Raycasts forward at knee height to detect walls/blocks ahead
+   - Auto-triggers `humanoid.Jump = true` when obstacle detected
+   - Auto-cleans up via `clone.Destroying` event
+   - Uses shared `npcRayParams` (excludes DeployedBrainrotsFolder)
+
+3. **New `moveNPCTo(clone, targetPos, timeout)`** — Replaces `tweenModelTo`:
+   - Uses `Humanoid:MoveTo()` for ground-following navigation
+   - Polls XZ distance until within 4 studs or timeout
+   - Re-issues MoveTo every 7s (Roblox auto-cancels after 8s)
+
+4. **New state tracking**: `npcJumpConnections`, `npcRayParams`, `NPC_WALK_SPEED`, `NPC_JUMP_POWER`
+
+5. **`createPitCloneModel`** — Calls `setupNPCJumping(clone)` after spawning
+
+6. **`startSquareMiningLoop`** — Uses `moveNPCTo` instead of `tweenModelTo`
+
 ### 2026-02-24: Teleport Buttons Added (Issue #7)
 
 #### Work Completed
