@@ -146,9 +146,13 @@
 2. **Also fixed existing admin panel Home/ShopTP buttons** (MenusGUI.Interactables.Container)
    - Set Size from `{0, 0, 0, 0}` to `{0.25, 0, 0.25, 0}` and fixed icon sizing
 
+3. **Bug fixes in teleport logic** (TeleportClient + ButtonHandlers)
+   - Home: base is named `"playerName_Base"` (set by BrainrotMiningServer line 1077), was searching for just `"playerName"` — now uses `player.Name .. "_Base"`
+   - Shop: moved landing position from `(130, 6, -128)` (inside shop model) to `(130, 5, -122)` (in front of shop)
+
 #### How It Works
-- **Home button**: Teleports player to their PlayerBase (finds base in `workspace.PlayerBases` by player name, lands 5 studs above base part)
-- **Shop button**: Teleports player to shop at `Vector3(130, 6, -128)`
+- **Home button**: Teleports player to their PlayerBase (finds `playerName_Base` in `workspace.PlayerBases`, lands 5 studs above base part)
+- **Shop button**: Teleports player in front of shop at `Vector3(130, 5, -122)`
 - Creates its own `TeleportHud` ScreenGui with `ResetOnSpawn = false`
 
 ### 2026-02-23: Rebirth System Implemented
