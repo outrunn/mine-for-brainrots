@@ -164,6 +164,14 @@
    - `grantReward()` handles `"brainrot"` type: picks random brainrot from `BrainrotConfig.BRAINROT_POOL[rarity]`, inserts into `ownedBrainrots`
    - Client displays actual brainrot name won (e.g. "Mythic Bombardiro Crocodilo")
 
+7. **Fixed spin animation bug** (`game.StarterPlayer.StarterPlayerScripts.SpinClient`)
+   - Wheel landed on wrong slot on 2nd+ spins due to accumulated rotation not being accounted for
+   - Fix: calculate `extraRotation` relative to `currentAngle % 360` instead of assuming start at 0
+
+8. **Added admin GiveSpins command**
+   - `AdminServer`: new `"GiveSpins"` command adds spins to `data.extraSpins`
+   - `AdminClient`: "+100 Free Spins" button in SPIN WHEEL section
+
 #### Design Decisions
 - **Regen model**: `extraSpins` = current available count, `freeSpinTimestamp` = last regen checkpoint. Elapsed intervals added as spins, timestamp advanced by consumed intervals (preserves partial progress).
 - **New player bonus**: Detected by `freeSpinTimestamp == 0` (default), grants 3 spins immediately.
