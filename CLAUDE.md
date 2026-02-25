@@ -3,6 +3,106 @@
 ## Game Overview
 "Mine for Brainrots" — Players mine a giant resetting pit of cubes to find ore, sell ore for money, and use money to pull brainrots (collectible characters) from a gacha system. Brainrots automate mining when acquired. Players upgrade their pickaxe (shaft = speed, head = power/durability damage) to progress.
 
+## Quick Reference — Instance Map
+
+### Server Scripts (`game.ServerScriptService`)
+| Script | Lines | Purpose |
+|--------|-------|---------|
+| `BrainrotMiningServer` | 1240 | Main server script: base spawning, brainrot placement/mining loops, collector squares, carry system, rebirth cleanup hook, auto-save, PlayerAdded/Removing |
+| `PitGenerator` | 211 | Generates the mining pit from PitConfig (20x20x20 layers, 145k blocks) |
+| `MiningSystem` | 89 | Handles pickaxe mining (MineBlock event), block damage/destroy |
+| `ShopServer` | 120 | Sell ore (with rebirth multiplier), buy upgrades incl. pickaxe tier (SellOre, BuyUpgrade events) |
+| `GachaServer` | 76 | Gacha pulls (SpinGacha event → GachaResult) |
+| `RebirthServer` | 72 | Rebirth system: validates pickaxe tier gate, fires cleanup, resets data, notifies client |
+| `AdminServer` | 161 | Admin commands (AdminCommand RemoteFunction) |
+
+### Server Modules (`game.ServerStorage`)
+| Module | Lines | Purpose |
+|--------|-------|---------|
+| `PlayerDataManager` | 188 | DataStore save/load. Exports: `initPlayer`, `getData`, `savePlayer`, `removePlayer`, `removeOwnedBrainrot`, `performRebirth` |
+
+### Server Assets (`game.ServerStorage`)
+| Instance | Type | Details |
+|----------|------|---------|
+| `BlockTemplates/` | Folder | 7 block parts: Block_Grass, Block_Dirt, Block_Stone, Block_Stone_Coal, Block_Stone_Redstone, Block_Stone_Gold, Block_Stone_Diamond |
+| `BrainrotModels/` | Folder | 105 brainrot Models (each has RootPart, FakeRootPart, AnimationController, mesh parts) |
+| `PlayerBaseTemplate` | Part (49x1x60) | Base floor plate. Children: Stairs (Model, 30 stair Parts), CollectorSquare through CollectorSquare_7 (8 Parts, each with "base" child), Pillar1-4, Backyard, Roof, conveyour 1, conveyour 2 |
+| `RebirthCleanup` | BindableEvent | Fired by RebirthServer to trigger cleanup in BrainrotMiningServer |
+
+### Shared Config (`game.ReplicatedStorage.Modules`)
+| Module | Lines | Key Data |
+|--------|-------|----------|
+| `PitConfig` | 82 | Pit origin `(0, 2.5, -100)`, 20x20 blocks, BLOCK_SIZE=5, 20 LAYER_DEFINITIONS, PICKAXE_TIERS (0-5), ORE_VALUES, DURABILITY, RESET_TIME=120s |
+| `BrainrotConfig` | 192 | SQUARE_NAMES (8 squares), RARITIES (Common→Mythic with miningSpeed/pickaxeTier), GACHA_TIERS (Basic/Premium/Ultra), BRAINROT_POOL (105 names across 6 rarities), SELL_PRICES |
+| `ShopConfig` | 40 | Shop upgrade costs/scaling |
+| `RebirthConfig` | 17 | REBIRTH_MULTIPLIER=1.2, MIN_PICKAXE_TIER=5, getMultiplier(count) → 1.2^count |
+
+### Remote Events (`game.ReplicatedStorage.Events`)
+| Event | Type | Direction |
+|-------|------|-----------|
+| `MineBlock` | RemoteEvent | Client → Server (pickaxe hit) |
+| `BlockDamaged` | RemoteEvent | Server → Client (damage feedback) |
+| `BlockDestroyed` | RemoteEvent | Server → Client (block break) |
+| `SellOre` | RemoteEvent | Client → Server |
+| `BuyUpgrade` | RemoteEvent | Client → Server |
+| `CurrencyUpdated` | RemoteEvent | Server → Client (HUD update) |
+| `SpinGacha` | RemoteEvent | Client → Server |
+| `GachaResult` | RemoteEvent | Server → Client |
+| `PlaceBrainrot` | RemoteEvent | Client → Server |
+| `PickUpBrainrot` | RemoteEvent | Client → Server |
+| `ActivateSquare` | RemoteEvent | Client → Server |
+| `DeactivateSquare` | RemoteEvent | Client → Server |
+| `CollectPending` | RemoteEvent | Client → Server |
+| `BrainrotUpdate` | RemoteEvent | Server → Client |
+| `SquareUpdate` | RemoteEvent | Server → Client |
+| `RequestPlacementUI` | RemoteEvent | Server → Client |
+| `SellBrainrot` | RemoteEvent | Client → Server |
+| `RequestRebirth` | RemoteEvent | Client → Server |
+| `RebirthResult` | RemoteEvent | Server → Client (success, newRebirthCount, newMultiplier) |
+| `GetPlayerData` | RemoteFunction | Client → Server |
+| `AdminCommand` | RemoteFunction | Client → Server |
+
+### Client Scripts (`game.StarterPlayer.StarterPlayerScripts`)
+| Script | Lines | Purpose |
+|--------|-------|---------|
+| `MiningClient` | 177 | Tool-based mining input, sends MineBlock events |
+| `ShopClient` | 831 | Shop UI (sell ore, buy upgrades, upgrade preview) |
+| `GachaClient` | 534 | Gacha pull UI and animations |
+| `BrainrotManagerClient` | 529 | Square placement UI, brainrot carry/place/pickup |
+| `CurrencyHudClient` | 270 | Currency display HUD + rebirth count/multiplier display + hold-to-confirm rebirth button |
+| `AdminClient` | 288 | Admin panel UI |
+
+### GUI (`game.StarterGui`)
+| ScreenGui | Used By |
+|-----------|---------|
+| `ShopGui` | ShopClient |
+| `GachaGui` | GachaClient |
+| `BrainrotManagerGui` | BrainrotManagerClient |
+| `CurrencyHud` | CurrencyHudClient |
+| `AdminGui` | AdminClient |
+
+### Workspace (Runtime)
+| Instance | Type | Details |
+|----------|------|---------|
+| `PlayerBases/` | Folder | Cloned bases at runtime (empty at edit time) |
+| `DeployedBrainrots/` | Folder | Active brainrot clones at runtime |
+| `Shop` | Model | 196 descendants, contains ShopKeeper |
+| `GachaMachine` | Model | 89 descendants |
+| `Terrain/` | Folder | 2 children |
+
+### Key Spatial Constants
+- **Pit origin**: `(0, 2.5, -100)` — top-left corner
+- **Pit size**: 100x100 studs (20x20 blocks x 5 stud BLOCK_SIZE)
+- **Pit center**: `(50, 2.5, -50)`
+- **Base template front faces -Z** (collector squares toward pit, stairs/backyard on +Z back)
+- **BASE_SLOTS** (in BrainrotMiningServer lines 46-62):
+  - South (rot 0°): `(25, 3, 40)`, `(75, 3, 40)`
+  - North (rot 180°): `(25, 3, -140)`, `(75, 3, -140)`
+  - West (rot 90°): `(-40, 3, -25)`, `(-40, 3, -75)`
+  - East (rot -90°): `(140, 3, -25)`, `(140, 3, -75)`
+
+---
+
 ## Architecture & Conventions
 
 ### Roblox Studio MCP Workflow
@@ -11,14 +111,6 @@
 - Always use `get_script_source` before editing a script to see current state.
 - Use `edit_script_lines` for surgical edits; `set_script_source` for full rewrites.
 - Use `start_playtest` / `get_playtest_output` / `stop_playtest` to test changes.
-
-### Script Organization
-- `ServerScriptService` — Server-side game logic (mining, economy, data saving)
-- `ServerStorage` — Server-only assets, module scripts, templates
-- `ReplicatedStorage` — Shared modules, RemoteEvents/RemoteFunctions, config data
-- `StarterPlayerScripts` — Client-side scripts (input, camera, effects)
-- `StarterGui` — UI screens (shop, inventory, gacha/pull screen, HUD)
-- `StarterPack` — Tools (pickaxe)
 
 ### Naming Conventions
 - Scripts: PascalCase (e.g., `MiningController`, `OreManager`)
@@ -35,49 +127,76 @@
 - Use Luau type annotations where helpful
 - Keep scripts focused — one responsibility per script
 
-## Core Systems
-
-### 1. Mining Pit
-- Grid of cube blocks with varying durability
-- Blocks contain ore (randomly distributed, rarity tiers)
-- Pit resets on a timer or when fully mined
-- Players hit blocks to reduce durability; block breaks when durability reaches 0
-
-### 2. Ore & Economy
-- Ore types with different rarity and sell values
-- Players sell ore for currency
-- Currency used for upgrades and brainrot pulls
-
-### 3. Pickaxe Upgrades
-- **Shaft upgrades** — Increase mining speed (swing rate)
-- **Head upgrades** — Increase power (durability damage per hit)
-- Upgrade costs scale with level
-
-### 4. Brainrot Gacha System
-- Spend currency to pull from brainrot pool
-- Rarity tiers for brainrots
-- Collected brainrots displayed in inventory
-
-### 5. Brainrot Automation
-- Owned brainrots auto-mine blocks for the player
-- Different brainrots have different mining stats
-- Automation runs while player is in-game
-
-### 6. Data Persistence
-- Save player data: currency, ore inventory, pickaxe levels, owned brainrots
-- Use DataStoreService with session locking
-
-## File Reference
-- `docs/gdd.md` — Full Game Design Document (paste your GDD here)
-- `docs/brainrots.md` — Brainrot roster, stats, and rarity tiers
-- `docs/ores.md` — Ore types, rarity, durability, sell values
-- `docs/upgrades.md` — Pickaxe upgrade scaling and costs
-
 ---
 
 ## Development Log
 
-### 2025-02-23: Player Base System Overhaul
+### 2026-02-23: Rebirth System Implemented
+
+#### Work Completed
+1. **Created `RebirthConfig` module** (`game.ReplicatedStorage.Modules.RebirthConfig`)
+   - `REBIRTH_MULTIPLIER = 1.2` (stacks multiplicatively: 1.2^count)
+   - `MIN_PICKAXE_TIER = 5` (must max pickaxe to rebirth)
+   - `getMultiplier(count)` helper function
+
+2. **Updated `PlayerDataManager`**
+   - Added `pickaxeTier = 0` to DEFAULT_DATA and saveData
+   - Added `performRebirth(player)` — increments rebirths, resets currency/ore/pickaxe/upgrades/squares, keeps ownedBrainrots
+
+3. **Updated `ShopServer`**
+   - Added rebirth multiplier to SellOre: `math.floor(baseValue * 1.2^rebirths)`
+   - Added `"pickaxe"` upgrade type to BuyUpgrade handler (reads cost from PitConfig.PICKAXE_TIERS)
+   - Added `pickaxeTier` to GetPlayerData response
+
+4. **Created `RebirthServer`** (`game.ServerScriptService.RebirthServer`)
+   - Validates pickaxeTier >= 5 gate
+   - Fires `RebirthCleanup` BindableEvent to BrainrotMiningServer
+   - Calls `performRebirth()`, notifies client with `RebirthResult`
+   - Debounce per player, immediate save after rebirth
+
+5. **Updated `BrainrotMiningServer`**
+   - Added `RebirthConfig` require
+   - Applied rebirth multiplier to mining loop ore value (line ~530)
+   - Added `RebirthCleanup` BindableEvent handler: stops mining loops, destroys all clones (pit/square/carried), clears target blocks, reinitializes square states on existing base
+
+6. **Updated `CurrencyHudClient`**
+   - Rebirth info frame showing "R3 | 1.73x income" (visible when rebirths > 0)
+   - REBIRTH button with hold-to-confirm (2 seconds) — visible when pickaxeTier >= 5
+   - Progress bar animation during hold
+   - Celebration flash on successful rebirth
+   - Polls pickaxeTier every 5s to show/hide button
+
+7. **Created Remote Events & BindableEvent**
+   - `RequestRebirth` (RemoteEvent, client → server)
+   - `RebirthResult` (RemoteEvent, server → client)
+   - `RebirthCleanup` (BindableEvent in ServerStorage, server-internal)
+
+#### Design Decisions
+- **What resets:** currency, ore, pickaxe tier, shaft/head levels, square assignments
+- **What stays:** ALL owned brainrots, rebirth count
+- **Multiplier applies to:** ore sell value (ShopServer) + brainrot mining income (BrainrotMiningServer)
+- **Base stays intact** during rebirth — only data and deployed clones are cleared
+- Rebirth shop/additional upgrades deferred to future session
+
+### 2026-02-23: Base Spawning Fixed
+
+#### Work Completed
+1. **Fixed base spawning around the pit**
+   - Replaced old `BASE_POSITIONS` (hardcoded Vector3 offsets) with `BASE_SLOTS` (position + rotation)
+   - 2 bases per side of the pit, all facing inward (8 total)
+   - Fixed critical bug: old code only moved root Part, not child parts (stairs, squares, pillars)
+   - New code uses CFrame rotation to move AND rotate all descendant BaseParts
+
+2. **Fixed typos**
+   - Renamed `ColectorSquare_3` → `CollectorSquare_3` (in ServerStorage and Workspace templates)
+   - Renamed `ColectorSquare_4` → `CollectorSquare_4` (in ServerStorage and Workspace templates)
+   - Fixed `"ColectorSquare_4"` → `"CollectorSquare_4"` in BrainrotConfig.SQUARE_NAMES
+
+3. **Cleanup**
+   - Deleted stray `PlayerBaseTemplate` from Workspace (should only exist in ServerStorage)
+   - Removed stray `end` on line 1123 causing syntax error
+
+### 2025-02-23: Player Base System Overhaul (Previous Session)
 
 #### Work Completed
 1. **Fixed 8-slot base spawning system**
@@ -87,156 +206,18 @@
 
 2. **Template organization**
    - Moved `PlayerBaseTemplateNew` from workspace → `ServerStorage.PlayerBaseTemplate`
-   - Best practice: templates in ServerStorage prevent client exploitation of upgradeable parts
 
-3. **BrainrotMiningServer updates** (game.ServerScriptService.BrainrotMiningServer)
-   - Added `BASE_POSITIONS` array with 8 fixed spawn coordinates:
-     ```lua
-     local BASE_POSITIONS = {
-         Vector3.new(31.49, 3.04, 63.50),   -- Slot 1
-         Vector3.new(-40.87, 3.00, -12.57), -- Slot 2
-         Vector3.new(-40.87, 3.00, -71.83), -- Slot 3
-         Vector3.new(34.01, 2.99, -146.69), -- Slot 4
-         Vector3.new(93.27, 2.99, -146.69), -- Slot 5
-         Vector3.new(154.51, 2.99, -88.82), -- Slot 6
-         Vector3.new(154.51, 2.99, -29.55), -- Slot 7
-         Vector3.new(93.26, 2.99, 62.31),   -- Slot 8
-     }
-     ```
-   - Updated `setupPlayerBase()` to use fixed positions instead of dynamic offsets
-   - Added MAX_PLAYERS = 8 check with kick message
+3. **BrainrotMiningServer updates**
+   - Added BASE_POSITIONS array, MAX_PLAYERS = 8
+   - Updated setupPlayerBase(), added PlayerDataManager.initPlayer() call
    - Moved auto-save loop and BindToClose from PlayerDataManager to BrainrotMiningServer
-   - Added PlayerDataManager.initPlayer() call in PlayerAdded handler
 
-4. **PlayerDataManager fixes** (game.ServerStorage.PlayerDataManager)
-   - Wrapped DataStore initialization in pcall to prevent load failures
-   - Removed auto-save loop (moved to main script)
-   - Removed event connections (modules should only export functions)
-   - Module now only exports functions: initPlayer, getData, savePlayer, removePlayer, removeOwnedBrainrot
+4. **PlayerDataManager fixes**
+   - Wrapped DataStore initialization in pcall
+   - Removed auto-save loop and event connections (modules should only export functions)
+   - Module now only exports: initPlayer, getData, savePlayer, removePlayer, removeOwnedBrainrot
 
 5. **Cleanup**
    - Deleted all 8 placeholder bases (PlayerBaseTemplate1-8) from workspace
    - Removed duplicate base clone code
    - Fixed syntax errors (extra `end` statements)
-
-#### Current Issue: Bases Not Spawning ❌
-
-**Problem:** When running the game in test mode, player bases do not spawn. Players join but cannot find their base.
-
-**Symptoms:**
-- No bases appear in `workspace.PlayerBases` folder
-- No error messages visible (need Output window check)
-- Template exists in ServerStorage.PlayerBaseTemplate
-- Script syntax validates correctly
-
-**Likely Causes:**
-1. **PlayerDataManager module load failure**
-   - Module may still be cached in failed state from earlier errors
-   - Requires full Studio restart, not just play mode restart
-   - Module had multiple iterations with blocking code that may have corrupted cache
-
-2. **setupPlayerBase() not being called**
-   - PlayerAdded handler may not be firing
-   - PlayerDataManager.initPlayer might be blocking or failing silently
-   - The `while not PlayerDataManager.getData(player) do` loop might be infinite
-
-3. **Template positioning logic issue**
-   - Template might be a Part instead of Model (line 1001-1006 has different logic for each)
-   - Offset calculation might be wrong
-   - CFrame manipulation might not work for the template structure
-
-#### Next Debugging Steps 🔍
-
-**Priority 1: Check if scripts are running**
-1. Open Output window during play mode
-2. Look for `[BrainrotMiningServer] Mining server initialized` message
-3. Look for `[PlayerDataManager] New data initialized for [PlayerName]` message
-4. Look for `[BrainrotMiningServer] Base set up for [PlayerName] (slot 0)` message
-5. Check for any error messages or warnings
-
-**Priority 2: Verify PlayerDataManager loads**
-```lua
--- Run this in command bar during play:
-local ServerStorage = game:GetService("ServerStorage")
-local success, result = pcall(function()
-    return require(ServerStorage.PlayerDataManager)
-end)
-print("PlayerDataManager load:", success, result)
-```
-
-**Priority 3: Check if setupPlayerBase is called**
-- Add debug prints at the start of `setupPlayerBase()` function
-- Check if the function returns early due to nil data or other conditions
-
-**Priority 4: Verify template structure**
-```lua
--- Check template type in command bar:
-local template = game.ServerStorage.PlayerBaseTemplate
-print("Template class:", template.ClassName)
-print("Is Model:", template:IsA("Model"))
-print("Children:", #template:GetChildren())
-```
-
-**Priority 5: Manual base creation test**
-```lua
--- Try spawning base manually in command bar:
-local Players = game:GetService("Players")
-local player = Players:GetPlayers()[1]
-local template = game.ServerStorage.PlayerBaseTemplate
-local base = template:Clone()
-base.Name = player.Name .. "_Base"
-base.Parent = workspace.PlayerBases
--- Check if base appears in workspace
-```
-
-#### Possible Fixes to Try
-
-**Fix A: Full Studio Restart**
-- Close Roblox Studio completely
-- Reopen the place
-- Clear any module cache issues
-
-**Fix B: Simplify setupPlayerBase waiting logic**
-```lua
--- Replace the while loop with a simple check:
-local data = PlayerDataManager.getData(player)
-if not data then
-    warn("[BrainrotMiningServer] No data for " .. player.Name)
-    return
-end
-```
-
-**Fix C: Add extensive debug logging**
-```lua
--- At start of setupPlayerBase:
-print("[DEBUG] setupPlayerBase called for", player.Name)
-print("[DEBUG] Getting data...")
-local data = PlayerDataManager.getData(player)
-print("[DEBUG] Data exists:", data ~= nil)
-if not data then return end
-print("[DEBUG] Assigning slot", nextSlot)
--- ... etc
-```
-
-**Fix D: Check template cloning**
-```lua
--- In setupPlayerBase, after cloning:
-local base = PlayerBaseTemplate:Clone()
-print("[DEBUG] Cloned base:", base, "Class:", base.ClassName)
-print("[DEBUG] Target position:", BASE_POSITIONS[slot + 1])
-```
-
-#### Files Modified Today
-- `game.ServerScriptService.BrainrotMiningServer` (1182 lines)
-  - Lines 22: Updated template reference
-  - Lines 40-57: Added BASE_POSITIONS and MAX_PLAYERS
-  - Lines 955-1012: Rewrote setupPlayerBase function
-  - Lines 1096-1098: Added PlayerDataManager.initPlayer call
-  - Lines 1166-1182: Added auto-save and BindToClose
-
-- `game.ServerStorage.PlayerDataManager` (149 lines)
-  - Lines 9-12: Wrapped DataStore in pcall
-  - Removed lines 146-165: Auto-save loop and event connections
-
-- `workspace`: Deleted PlayerBaseTemplate1-8 placeholders
-- `ServerStorage`: Added PlayerBaseTemplate (moved from workspace)

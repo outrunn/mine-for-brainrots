@@ -1,0 +1,37 @@
+{
+  "mcpServers": {
+    "robloxstudio-1": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "robloxstudio-mcp@latest"
+      ],
+      "env": {
+        "ROBLOX_STUDIO_PORT": "58741"
+      }
+    },
+    "robloxstudio-2": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "robloxstudio-mcp@latest"
+      ],
+      "env": {
+        "ROBLOX_STUDIO_PORT": "58742"
+      }
+    },
+    "robloxstudio-3": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "robloxstudio-mcp@latest"
+      ],
+      "env": {
+        "ROBLOX_STUDIO_PORT": "58743"
+      }
+    }
+  }
+}
