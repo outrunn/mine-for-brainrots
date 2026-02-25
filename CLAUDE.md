@@ -169,8 +169,8 @@ Replaced entire NPC movement system with Roblox Humanoid-driven physics walking.
 #### Work Completed
 1. **Created `TeleportClient` LocalScript** (`game.StarterPlayer.StarterPlayerScripts.TeleportClient`)
    - Standalone always-visible teleport bar at top-center of screen
-   - Two buttons: **Home** (green icon "H") and **Shop** (gold icon "$")
-   - Style matches CurrencyHud dark theme: `Color3.fromRGB(25, 25, 35)` bg, `UICorner` radius 8, `UIStroke` in `Color3.fromRGB(60, 60, 80)`, `GothamBold` white text
+   - Two buttons: **Home** (green) and **Shop** (gold)
+   - Style matches game UI: `FredokaOne` white text with thick dark navy `UIStroke` outlines (`Color3.fromRGB(4, 4, 53)`), `UICorner` radius 12, bright button colors with thick dark borders
    - Hover/press tween feedback on buttons
    - 1-second cooldown between teleports
    - Flash animation on successful teleport
