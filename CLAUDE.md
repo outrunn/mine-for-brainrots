@@ -131,6 +131,41 @@
 
 ## Development Log
 
+### 2026-02-25: Daily Spin System (Issue #23)
+
+#### Work Completed
+1. **Overhauled SpinConfig** (`game.ReplicatedStorage.Modules.SpinConfig`)
+   - Changed from 1 free spin / 24h to 5 spins / day regenerating every 4h 48m (17280s)
+   - `MAX_DAILY_SPINS = 5`, `REGEN_INTERVAL = 17280`, `NEW_PLAYER_BONUS_SPINS = 3`
+   - Removed `BUY_SPIN_COSTS` entirely — no purchasing
+   - Improved rewards: 500/1000/2500/5000 coins, 10 coal, 5 gold, 2 diamonds, gacha ticket (8 slots)
+
+2. **Rewrote SpinServer** (`game.ServerScriptService.SpinServer`)
+   - `regenerateSpins(data)` — calculates spins regenerated since last checkpoint, caps at MAX
+   - New player detection: `freeSpinTimestamp == 0` → grants 3 bonus spins
+   - Going from full→not-full resets regen timer to `now`
+   - BuySpins handler replaced with no-op warning
+   - Added per-player debounce
+   - PlayerAdded hook to regenerate spins on join
+
+3. **Updated SpinClient** (`game.StarterPlayer.StarterPlayerScripts.SpinClient`)
+   - Displays "Spins: X/5" format instead of "Spins: X"
+   - Shows "All spins ready!" when at max, "Next spin: Xh Xm" otherwise
+   - Init mirrors server regen logic for accurate display
+   - `SpinWheelResult` handler updated for new signature (added `maxSpins` param)
+
+4. **Updated ShopServer** (`game.ServerScriptService.ShopServer`)
+   - Added `freeSpinTimestamp` and `extraSpins` to `GetPlayerData` response
+
+5. **Updated ButtonHandlers** (`game.StarterGui.MenusGUI.Scripts.ButtonHandlers`)
+   - All buy-spin handlers now show "Coming Soon!" placeholder instead of firing BuySpins
+
+#### Design Decisions
+- **Regen model**: `extraSpins` = current available count, `freeSpinTimestamp` = last regen checkpoint. Elapsed intervals added as spins, timestamp advanced by consumed intervals (preserves partial progress).
+- **New player bonus**: Detected by `freeSpinTimestamp == 0` (default), grants 3 spins immediately.
+- **No purchasing**: BuySpins event still exists (to avoid breaking UI references) but server handler is a no-op.
+- **Backward compatible**: Reuses existing `freeSpinTimestamp` and `extraSpins` data fields — no PlayerDataManager schema changes needed.
+
 ### 2026-02-25: Fix Base Spawning (Issue #31)
 
 #### Bugs Found & Fixed
