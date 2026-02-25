@@ -71,6 +71,7 @@
 | `BrainrotManagerClient` | 529 | Square placement UI, brainrot carry/place/pickup |
 | `CurrencyHudClient` | 270 | Currency display HUD + rebirth count/multiplier display + hold-to-confirm rebirth button |
 | `AdminClient` | 288 | Admin panel UI |
+| `TeleportClient` | 180 | Always-visible Home & Shop teleport buttons at top-center |
 
 ### GUI (`game.StarterGui`)
 | ScreenGui | Used By |
@@ -131,20 +132,24 @@
 
 ## Development Log
 
-### 2026-02-24: Teleport Buttons Enabled (Issue #7)
+### 2026-02-24: Teleport Buttons Added (Issue #7)
 
 #### Work Completed
-1. **Fixed Home and ShopTP buttons in MenusGUI**
-   - Buttons already existed at `game.StarterGui.MenusGUI.Interactables.Container` with correct tags (`UI_Button`) and attributes (`Action: TeleportHome` / `Action: TeleportShop`)
-   - Handler code already existed in `ButtonHandlers` module (`Handlers.TeleportHome`, `Handlers.TeleportShop`)
-   - **Root cause:** Both buttons had zero Size `{0, 0, 0, 0}` — invisible and non-clickable
-   - Set button Size to `{0.25, 0, 0.25, 0}` (matching Shop, Rewards, Spin buttons)
-   - Set Icon Size to `{1, 0, 1, 0}`, Position to `{0.5, 0, 0.5, 0}`, AnchorPoint to `(0.5, 0.5)` (matching Shop icon)
+1. **Created `TeleportClient` LocalScript** (`game.StarterPlayer.StarterPlayerScripts.TeleportClient`)
+   - Standalone always-visible teleport bar at top-center of screen
+   - Two buttons: **Home** (green icon "H") and **Shop** (gold icon "$")
+   - Style matches CurrencyHud dark theme: `Color3.fromRGB(25, 25, 35)` bg, `UICorner` radius 8, `UIStroke` in `Color3.fromRGB(60, 60, 80)`, `GothamBold` white text
+   - Hover/press tween feedback on buttons
+   - 1-second cooldown between teleports
+   - Flash animation on successful teleport
+
+2. **Also fixed existing admin panel Home/ShopTP buttons** (MenusGUI.Interactables.Container)
+   - Set Size from `{0, 0, 0, 0}` to `{0.25, 0, 0.25, 0}` and fixed icon sizing
 
 #### How It Works
-- **Home button** (`rbxassetid://18812924923`): Teleports player to their PlayerBase (finds base in `workspace.PlayerBases` by player name, lands 5 studs above)
-- **ShopTP button** (`rbxassetid://18812613498`): Teleports player to shop at `Vector3(130, 6, -128)`
-- Both use the existing UIPACK ButtonListener → ButtonHandlers dispatch system (CollectionService `UI_Button` tag + `Action` attribute)
+- **Home button**: Teleports player to their PlayerBase (finds base in `workspace.PlayerBases` by player name, lands 5 studs above base part)
+- **Shop button**: Teleports player to shop at `Vector3(130, 6, -128)`
+- Creates its own `TeleportHud` ScreenGui with `ResetOnSpawn = false`
 
 ### 2026-02-23: Rebirth System Implemented
 
