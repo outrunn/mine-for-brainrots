@@ -1,6 +1,34 @@
 {
-  "maxConcurrent": 2,
-  "activeAgents": [],
+  "maxConcurrent": 3,
+  "mcpPorts": {
+    "58741": "in-use",
+    "58742": "in-use",
+    "58743": "available"
+  },
+  "activeAgents": [
+    {
+      "terminalWindow": "3255",
+      "pid": 45519,
+      "mcpPort": 58741,
+      "issue": 8,
+      "title": "Fix brainrots glitching through floor",
+      "branch": "fix/brainrot-physics",
+      "startedAt": "2026-02-24T19:23:00Z",
+      "status": "running"
+    },
+    {
+      "terminalWindow": "3260",
+      "pid": 45606,
+      "mcpPort": 58742,
+      "issue": 4,
+      "title": "Overhaul mining system",
+      "branch": "feature/mining-overhaul",
+      "startedAt": "2026-02-24T19:23:00Z",
+      "status": "running"
+    }
+  ],
   "completedToday": 0,
-  "lastSync": null
+  "lastSync": "2026-02-24T19:30:00Z",
+  "lastMcpTest": "2026-02-24T19:31:00Z",
+  "mcpStatus": "healthy"
 }
