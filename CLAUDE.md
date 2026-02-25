@@ -153,7 +153,18 @@
 - **No new RemoteEvents needed**: Reuses existing `RewardClaimed` event, just sends richer data
 - **Programmatic UI**: Popup is created entirely in code (no new GUI instances in StarterGui) to avoid UIPACK conflicts
 - **Auto-dismiss**: 5-second timeout ensures popup doesn't block gameplay if player ignores it
-- **Accent colors**: Currency=gold, Coal=dark gray, Gold ore=gold, Redstone=red, Diamond=cyan, Gacha=purple
+- **Accent colors**: Currency=gold, Coal=dark gray, Gold ore=gold, Redstone=red, Diamond=cyan, Brainrot=blue, Spin=green
+
+5. **Updated `RewardsConfig`** (`game.ReplicatedStorage.Modules.RewardsConfig`)
+   - Milestone 3 changed: 30min/20 Coal → 50min/Rare Brainrot (type="brainrot", rarity="Rare")
+   - Milestone 5 changed: 2hr/Premium Gacha Ticket → 2hr/1 Free Spin (type="spin")
+   - New reward types: `"brainrot"` (random from pool) and `"spin"` (adds to extraSpins)
+
+6. **Updated `RewardsServer`** grant logic
+   - Added `BrainrotConfig` require
+   - `"brainrot"` type: picks random from `BRAINROT_POOL[rarity]`, inserts into `ownedBrainrots`, returns actual brainrot name as description
+   - `"spin"` type: adds `milestone.amount` to `data.extraSpins`
+   - `grantMilestoneReward` now returns `actualDescription` (important for brainrot where name is randomized)
 
 3. **Updated `AdminServer`** (`game.ServerScriptService.AdminServer`)
    - Added `RewardsConfig` require
