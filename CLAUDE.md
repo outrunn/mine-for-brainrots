@@ -131,6 +131,21 @@
 
 ## Development Log
 
+### 2026-02-24: Teleport Buttons Enabled (Issue #7)
+
+#### Work Completed
+1. **Fixed Home and ShopTP buttons in MenusGUI**
+   - Buttons already existed at `game.StarterGui.MenusGUI.Interactables.Container` with correct tags (`UI_Button`) and attributes (`Action: TeleportHome` / `Action: TeleportShop`)
+   - Handler code already existed in `ButtonHandlers` module (`Handlers.TeleportHome`, `Handlers.TeleportShop`)
+   - **Root cause:** Both buttons had zero Size `{0, 0, 0, 0}` — invisible and non-clickable
+   - Set button Size to `{0.25, 0, 0.25, 0}` (matching Shop, Rewards, Spin buttons)
+   - Set Icon Size to `{1, 0, 1, 0}`, Position to `{0.5, 0, 0.5, 0}`, AnchorPoint to `(0.5, 0.5)` (matching Shop icon)
+
+#### How It Works
+- **Home button** (`rbxassetid://18812924923`): Teleports player to their PlayerBase (finds base in `workspace.PlayerBases` by player name, lands 5 studs above)
+- **ShopTP button** (`rbxassetid://18812613498`): Teleports player to shop at `Vector3(130, 6, -128)`
+- Both use the existing UIPACK ButtonListener → ButtonHandlers dispatch system (CollectionService `UI_Button` tag + `Action` attribute)
+
 ### 2026-02-23: Rebirth System Implemented
 
 #### Work Completed
