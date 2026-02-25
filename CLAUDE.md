@@ -59,6 +59,7 @@
 | `SellBrainrot` | RemoteEvent | Client → Server |
 | `RequestRebirth` | RemoteEvent | Client → Server |
 | `RebirthResult` | RemoteEvent | Server → Client (success, newRebirthCount, newMultiplier) |
+| `SetAutoMine` | RemoteEvent | Client → Server |
 | `GetPlayerData` | RemoteFunction | Client → Server |
 | `AdminCommand` | RemoteFunction | Client → Server |
 
@@ -130,6 +131,29 @@
 ---
 
 ## Development Log
+
+### 2026-02-25: Reward Claim Feedback Popup (Issue #35)
+
+#### Work Completed
+1. **Updated `RewardsServer`** (`game.ServerScriptService.RewardsServer`)
+   - `RewardClaimed` event now sends full `rewardInfo` table (type, amount, description, oreType, tier) instead of just the description string
+   - Enables client to display rich reward details in popup
+
+2. **Updated `RewardsClient`** (`game.StarterPlayer.StarterPlayerScripts.RewardsClient`)
+   - Added `showRewardPopup(rewardInfo)` function that creates a centered modal popup
+   - Popup shows: "REWARD CLAIMED!" header, reward description (e.g. "200 Coins"), "Added to your inventory" subtitle, OK button
+   - Color-coded accent based on reward type: gold for currency, ore-specific colors, purple for gacha tickets
+   - Animated entrance: overlay fade-in, popup scale-up (Back easing), staggered text fade-in
+   - Animated exit: all elements fade out together
+   - Dismissible via OK button, clicking overlay, or auto-dismiss after 5 seconds
+   - Backward compatible: handles old string-format `rewardInfo` from server gracefully
+   - Popup uses its own ScreenGui (`RewardPopupGui`, DisplayOrder 100) to render above other UI
+
+#### Design Decisions
+- **No new RemoteEvents needed**: Reuses existing `RewardClaimed` event, just sends richer data
+- **Programmatic UI**: Popup is created entirely in code (no new GUI instances in StarterGui) to avoid UIPACK conflicts
+- **Auto-dismiss**: 5-second timeout ensures popup doesn't block gameplay if player ignores it
+- **Accent colors**: Currency=gold, Coal=dark gray, Gold ore=gold, Redstone=red, Diamond=cyan, Gacha=purple
 
 ### 2026-02-25: Brainrot Auto-Resume After Pit Reset (Issue #36)
 
