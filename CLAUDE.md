@@ -138,7 +138,7 @@
    - Changed from 1 free spin / 24h to 5 spins / day regenerating every 4h 48m (17280s)
    - `MAX_DAILY_SPINS = 5`, `REGEN_INTERVAL = 17280`, `NEW_PLAYER_BONUS_SPINS = 3`
    - Removed `BUY_SPIN_COSTS` entirely — no purchasing
-   - Rewards: 2k/5k/10k/25k/50k coins + Random Rare (15%), Epic (8%), Mythic (5%) brainrot drops. Weights sum to 100.
+   - 7 slots (matching wheel UI): 2k/5k/10k/25k coins + Rare (15%), Epic (10%), Mythic (5%) brainrot drops. Weights sum to 100.
 
 2. **Rewrote SpinServer** (`game.ServerScriptService.SpinServer`)
    - `regenerateSpins(data)` — calculates spins regenerated since last checkpoint, caps at MAX
@@ -168,7 +168,8 @@
 - **Regen model**: `extraSpins` = current available count, `freeSpinTimestamp` = last regen checkpoint. Elapsed intervals added as spins, timestamp advanced by consumed intervals (preserves partial progress).
 - **New player bonus**: Detected by `freeSpinTimestamp == 0` (default), grants 3 spins immediately.
 - **No purchasing**: BuySpins event still exists (to avoid breaking UI references) but server handler is a no-op.
-- **Brainrot drops**: Rare=15%, Epic=8%, Mythic=5%. Random pick from existing BRAINROT_POOL in BrainrotConfig.
+- **Brainrot drops**: Rare=15%, Epic=10%, Mythic=5%. Random pick from existing BRAINROT_POOL in BrainrotConfig.
+- **Wheel UI**: 7 segment labels updated in `MenusGUI.Menus.Spin.Roulette.Rewards`, BuyButtons frame hidden (Visible=false).
 - **Backward compatible**: Reuses existing `freeSpinTimestamp` and `extraSpins` data fields — no PlayerDataManager schema changes needed.
 
 ### 2026-02-25: Fix Base Spawning (Issue #31)
