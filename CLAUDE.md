@@ -8,10 +8,10 @@
 ### Server Scripts (`game.ServerScriptService`)
 | Script | Lines | Purpose |
 |--------|-------|---------|
-| `BrainrotMiningServer` | 1240 | Main server script: base spawning, brainrot placement/mining loops, collector squares, carry system, rebirth cleanup hook, auto-save, PlayerAdded/Removing |
-| `PitGenerator` | 211 | Generates the mining pit from PitConfig (20x20x20 layers, 145k blocks) |
-| `MiningSystem` | 89 | Handles pickaxe mining (MineBlock event), block damage/destroy |
-| `ShopServer` | 120 | Sell ore (with rebirth multiplier), buy upgrades incl. pickaxe tier (SellOre, BuyUpgrade events) |
+| `BrainrotMiningServer` | 1610 | Main server script: base spawning, pickaxe management, brainrot placement/mining loops, collector squares, rebirth cleanup hook, auto-save, PlayerAdded/Removing |
+| `PitGenerator` | 339 | Generates the mining pit from PitConfig (30x30x20 layers, 328k blocks) |
+| `MiningSystem` | 179 | Handles pickaxe mining (MineBlock event), directional tunnel multi-mine, block damage/destroy |
+| `ShopServer` | 181 | Sell ore (with rebirth multiplier), buy upgrades incl. pickaxe tier + model swap (SellOre, BuyUpgrade events) |
 | `GachaServer` | 76 | Gacha pulls (SpinGacha event → GachaResult) |
 | `RebirthServer` | 72 | Rebirth system: validates pickaxe tier gate, fires cleanup, resets data, notifies client |
 | `AdminServer` | 161 | Admin commands (AdminCommand RemoteFunction) |
@@ -20,6 +20,7 @@
 | Module | Lines | Purpose |
 |--------|-------|---------|
 | `PlayerDataManager` | 188 | DataStore save/load. Exports: `initPlayer`, `getData`, `savePlayer`, `removePlayer`, `removeOwnedBrainrot`, `performRebirth` |
+| `PickaxeManager` | 59 | Shared pickaxe tool management. Exports: `givePickaxe(player, tier)` — removes old pickaxe Tools, clones correct model from PickaxeModels |
 
 ### Server Assets (`game.ServerStorage`)
 | Instance | Type | Details |
@@ -27,12 +28,13 @@
 | `BlockTemplates/` | Folder | 7 block parts: Block_Grass, Block_Dirt, Block_Stone, Block_Stone_Coal, Block_Stone_Redstone, Block_Stone_Gold, Block_Stone_Diamond |
 | `BrainrotModels/` | Folder | 105 brainrot Models (each has RootPart, FakeRootPart, AnimationController, mesh parts) |
 | `PlayerBaseTemplate` | Part (49x1x60) | Base floor plate. Children: Stairs (Model, 30 stair Parts), CollectorSquare through CollectorSquare_7 (8 Parts, each with "base" child), Pillar1-4, Backyard, Roof, conveyour 1, conveyour 2 |
+| `PickaxeModels/` | Folder | 8 pickaxe Tool models: Wooden, Stone, Iron, Gold, Quartz, Sapphire, Sapphire Quartz, Aquatic Crystalline (each has Handle, ToolType StringValue) |
 | `RebirthCleanup` | BindableEvent | Fired by RebirthServer to trigger cleanup in BrainrotMiningServer |
 
 ### Shared Config (`game.ReplicatedStorage.Modules`)
 | Module | Lines | Key Data |
 |--------|-------|----------|
-| `PitConfig` | 82 | Pit origin `(0, 2.5, -100)`, 20x20 blocks, BLOCK_SIZE=5, 20 LAYER_DEFINITIONS, PICKAXE_TIERS (0-5), ORE_VALUES, DURABILITY, RESET_TIME=120s |
+| `PitConfig` | 89 | Pit origin `(-75, 2.5, -75)`, 30x30 blocks, BLOCK_SIZE=5, 20 LAYER_DEFINITIONS, PICKAXE_TIERS (0-7), ORE_VALUES, DURABILITY, RESET_TIME=600s |
 | `BrainrotConfig` | 192 | SQUARE_NAMES (8 squares), RARITIES (Common→Mythic with miningSpeed/pickaxeTier), GACHA_TIERS (Basic/Premium/Ultra), BRAINROT_POOL (105 names across 6 rarities), SELL_PRICES |
 | `ShopConfig` | 40 | Shop upgrade costs/scaling |
 | `RebirthConfig` | 17 | REBIRTH_MULTIPLIER=1.2, MIN_PICKAXE_TIER=5, getMultiplier(count) → 1.2^count |
@@ -62,14 +64,15 @@
 | `SetAutoMine` | RemoteEvent | Client → Server |
 | `GetPlayerData` | RemoteFunction | Client → Server |
 | `AdminCommand` | RemoteFunction | Client → Server |
+| `CheckAdmin` | RemoteFunction | Client → Server (returns boolean) |
 
 ### Client Scripts (`game.StarterPlayer.StarterPlayerScripts`)
 | Script | Lines | Purpose |
 |--------|-------|---------|
-| `MiningClient` | 177 | Tool-based mining input, sends MineBlock events |
+| `MiningClient` | 1023 | Tool-based mining input, auto-mine loop, directional tunnel multi-mine preview, VFX, flexible pickaxe tool detection |
 | `ShopClient` | 831 | Shop UI (sell ore, buy upgrades, upgrade preview) |
 | `GachaClient` | 534 | Gacha pull UI and animations |
-| `BrainrotManagerClient` | 529 | Square placement UI, brainrot carry/place/pickup |
+| `BrainrotManagerClient` | 483 | Square placement UI, brainrot place from selection popup |
 | `CurrencyHudClient` | 270 | Currency display HUD + rebirth count/multiplier display + hold-to-confirm rebirth button |
 | `AdminClient` | 288 | Admin panel UI |
 
@@ -92,15 +95,17 @@
 | `Terrain/` | Folder | 2 children |
 
 ### Key Spatial Constants
-- **Pit origin**: `(0, 2.5, -100)` — top-left corner
-- **Pit size**: 100x100 studs (20x20 blocks x 5 stud BLOCK_SIZE)
-- **Pit center**: `(50, 2.5, -50)`
+- **Pit origin**: `(-75, 2.5, -75)` — top-left corner
+- **Pit size**: 150x150 studs (30x30 blocks x 5 stud BLOCK_SIZE)
+- **Pit center**: `(0, 2.5, 0)`
 - **Base template front faces -Z** (collector squares toward pit, stairs/backyard on +Z back)
-- **BASE_SLOTS** (in BrainrotMiningServer lines 46-62):
-  - South (rot 0°): `(25, 3, 40)`, `(75, 3, 40)`
-  - North (rot 180°): `(25, 3, -140)`, `(75, 3, -140)`
-  - West (rot 90°): `(-40, 3, -25)`, `(-40, 3, -75)`
-  - East (rot -90°): `(140, 3, -25)`, `(140, 3, -75)`
+- **BASE_SLOTS** (in BrainrotMiningServer lines 68-81):
+  - South (rot 0°): `(-33, 3, 115)`, `(33, 3, 115)`
+  - North (rot 180°): `(-33, 3, -115)`, `(33, 3, -115)`
+  - West (rot -90°): `(-115, 3, -33)`, `(-115, 3, 33)`
+  - East (rot 90°): `(115, 3, -33)`, `(115, 3, 33)`
+- **Shop**: `(180, 9, 0)` — east of pit, facing west
+- **GachaMachine**: `(180, 7, -25)` — next to shop
 
 ---
 
@@ -131,6 +136,111 @@
 ---
 
 ## Development Log
+
+### 2026-02-27: Admin Panel Authorization (Issue #88)
+
+#### Work Completed
+1. **Updated `AdminServer`** (`game.ServerScriptService.AdminServer`)
+   - Populated `ADMIN_IDS` whitelist with UserIds: `984020180` (james), `16707576` (higiy123)
+   - `isAdmin()` allows all users in Studio, checks whitelist in production
+   - Added `CheckAdmin` RemoteFunction handler — returns `true`/`false` so client can hide UI
+
+2. **Updated `AdminClient`** (`game.StarterPlayer.StarterPlayerScripts.AdminClient`)
+   - Added early auth check: calls `CheckAdmin:InvokeServer()` before building any UI
+   - Non-admins: `adminGui.Enabled = false` + `return` (script exits, no toggle button or panel created)
+   - Admins: script proceeds normally, full panel visible
+
+3. **Created `CheckAdmin` RemoteFunction** (`game.ReplicatedStorage.Events.CheckAdmin`)
+   - Client → Server: returns boolean admin status
+
+#### Security Model
+- **Server-side**: `AdminCommand.OnServerInvoke` rejects non-admins with `{ success = false, message = "Not authorized" }` (was already present)
+- **Client-side**: Non-admins never see the admin button or panel (script early-returns)
+- **Studio bypass**: `isAdmin()` returns `true` in Studio for development convenience
+- **Whitelist by UserId**: Immune to username changes
+
+### 2026-02-26: Directional Tunnel Multi-Mine + Pickaxe Bug Fixes (Issue #77 follow-up)
+
+#### Work Completed
+1. **Updated `PitConfig`** — multiMine now = tier+1 for all tiers (was irregular: 1,1,2,3,4,5,6,8 → now 1,2,3,4,5,6,7,8)
+
+2. **Rewrote multi-mine in `MiningSystem` (server)** and **`MiningClient` (client)**
+   - Replaced radius-based `findAdjacentBlocks` (sorted by distance) with directional tunnel pattern
+   - Detects which face of the block the player is mining (top/bottom, X-face, Z-face)
+   - Expands cross-section perpendicular to mining direction using predefined `EXPANSION_OFFSETS`
+   - Uses `GetPartBoundsInBox` at grid-aligned positions instead of `GetPartBoundsInRadius`
+   - Pattern: target → below → above → right → left → diagonals (growing cross/diamond)
+
+3. **Fixed MiningClient tool swap detection**
+   - Bug: `initTool()` and `CharacterAdded` did early `return` when pickaxe found, skipping `ChildAdded` listener
+   - Fix: Always connect `Backpack.ChildAdded` before checking for existing tool, so pickaxe upgrades are detected
+
+4. **Created Issue #90** for pickaxe grip position tuning (per-model grip axes vary, uniform offset doesn't work)
+
+#### Design Decisions
+- **Face detection**: Quantizes player-to-block vector to determine mining face, then picks u/v axes perpendicular to it
+- **Grid-aligned search**: Uses `BLOCK_SIZE`-spaced offsets from target position, more predictable than radius search
+- **Client/server parity**: Both use identical `EXPANSION_OFFSETS` and `getCrossSectionAxes` logic
+
+### 2026-02-26: Remove Carry-Brainrot-to-Shop Sell Mechanic (Issue #86)
+
+#### Work Completed
+1. **Updated `BrainrotMiningServer`** (1875 → 1610 lines)
+   - Removed `ShopKeeper` reference and `carriedClones` state variable
+   - Removed `createCarriedCloneModel()` and `destroyCarriedClone()` functions
+   - Removed `handlePromptF()` (pickup from podium) and `handleSellBrainrot()` (sell at shop)
+   - Removed `SellPrompt` ProximityPrompt on ShopKeeper head
+   - Removed `PromptF` creation and Triggered handler in `setupPlayerBase()`
+   - Simplified `handlePromptE()`: removed Case 1 (carry+place on empty square), simplified Case 2 (no carry filter in unplaced list)
+   - Cleaned `updateSquarePrompts()`: removed all PromptF lookups and state updates
+   - Removed `data.carriedBrainrot` 4th param from `sendSquareUpdate()`
+   - Removed `carriedBrainrot` validation from `PlaceBrainrot` handler
+   - Removed carry cleanup from `CharacterRemoving`, `PlayerRemoving`, and `RebirthCleanup`
+
+2. **Updated `BrainrotManagerClient`** (528 → 483 lines)
+   - Removed `carryBg` color constant and `currentCarriedBrainrot` state variable
+   - Removed entire carry HUD section (frame, label, `updateCarryHud()` function)
+   - Removed `carriedBrainrot` param from `SquareUpdate` handler
+   - Removed `updateCarryHud()` calls from `SquareUpdate` and `BrainrotUpdate` handlers
+
+#### What Stays Unchanged
+- PromptE (E key) for place/activate/deactivate
+- PlaceBrainrot from selection UI popup
+- All mining, collection, NPC logic
+- BrainrotConfig.SELL_PRICES (for future sell-from-menu feature)
+
+### 2026-02-26: Pickaxe Tier Model Swap + New Endgame Tiers (Issue #77)
+
+#### Work Completed
+1. **Moved pickaxe models** (`game.Workspace.Pickaxes` → `game.ServerStorage.PickaxeModels`)
+   - 8 Tool models: Wooden, Stone, Iron, Gold, Quartz, Sapphire, Sapphire Quartz, Aquatic Crystalline
+   - Deleted old static `game.StarterPack.Pickaxe`
+
+2. **Updated `PitConfig`** (`game.ReplicatedStorage.Modules.PitConfig`)
+   - Renamed tier 4: Diamond → Quartz, tier 5: Obsidian → Sapphire
+   - Added tier 6: Sapphire Quartz (maxLayer=20, cost=500k, multiMine=7)
+   - Added tier 7: Aquatic Crystalline (maxLayer=20, cost=2M, multiMine=8)
+   - multiMine = tier+1 for all tiers (1,2,3,4,5,6,7,8)
+
+3. **Created `PickaxeManager`** (`game.ServerStorage.PickaxeManager`)
+   - `givePickaxe(player, tier)`: removes existing pickaxe Tools, clones correct model from PickaxeModels
+   - Identifies pickaxes by `string.find(name, "Pickaxe")`
+   - Used by ShopServer, BrainrotMiningServer
+
+4. **Updated `ShopServer`** — calls `PickaxeManager.givePickaxe()` after tier upgrade
+
+5. **Updated `BrainrotMiningServer`**
+   - Deletes `StarterPack.Pickaxe` at init (prevents old static model)
+   - Gives pickaxe on `setupPlayerBase()` (join), `CharacterAdded` (respawn), `RebirthCleanup` (tier 0)
+
+6. **Updated `MiningClient`** — flexible tool detection: `isPickaxeTool()` checks `string.find(name, "Pickaxe")` instead of exact match
+
+7. **Updated `ShopClient`** — dynamic `MAX_PICKAXE_TIER` computed from PitConfig, replaces hardcoded `5` in tier display/progress/buy logic
+
+#### Design Decisions
+- **RebirthConfig.MIN_PICKAXE_TIER stays at 5** — rebirth gate unchanged, endgame tiers are post-rebirth content
+- **Layer definitions unchanged** — tiers 5-7 all share maxLayer=20, layer rebalancing deferred
+- **PickaxeManager as shared module** — avoids duplicating pickaxe swap logic across 3 scripts
 
 ### 2026-02-25: Reward Claim Feedback Popup (Issue #35)
 
